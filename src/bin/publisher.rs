@@ -1,18 +1,19 @@
 use kafka::producer::{Producer, Record, RequiredAcks};
-use chrono::{
-    DateTime,
-    offset::Utc,
-};
-use std::{
-    thread::sleep,
-    time::{Duration, SystemTime},
-};
+use local_ip_address::local_ip;
 use opentelemetry::{
     global, sdk,
     trace::{TraceError, Tracer},
 };
+use std::{
+    // fmt::format,
+    thread::sleep,
+    time::{Duration, SystemTime},
+};
+use teleps::message::Message;
 
 const TOPIC: &str = "test";
+const RECEIVER_IP: &str = "localhost";
+const RECEIVER_PORT: &str = "9092";
 
 fn init_tracer() -> Result<sdk::trace::Tracer, TraceError> {
     opentelemetry_jaeger::new_pipeline().install_simple()
@@ -23,25 +24,27 @@ fn main() -> Result<(), opentelemetry::trace::TraceError> {
     let tracer = init_tracer().expect("failed to initialize tracer");
 
     tracer.in_span("doing_work", |_| {
-        let mut producer = Producer::from_hosts(vec!["localhost:9092".to_owned()])
-            .with_ack_timeout(Duration::from_secs(1))
-            .with_required_acks(RequiredAcks::One)
-            .create()
-            .unwrap();
-        // let mut buf = String::with_capacity(2);
-        let mut buf = String::new();
+        let mut producer = Producer::from_hosts(vec![
+            RECEIVER_IP.to_string() + ":" + RECEIVER_PORT,
+        ])
+        .with_ack_timeout(Duration::from_secs(1))
+        .with_required_acks(RequiredAcks::One)
+        .create()
+        .unwrap();
         for _ in 1..10 {
-            let system_time = SystemTime::now();
-            let datetime: DateTime<Utc> = system_time.into();
-            // buf.push_str(&format!("{}", datetime.format("%Y-%m-%dT%H%:%M:%S.%f")));
-            buf.push_str(&format!("{}", datetime.format("%+")));
-
-            println!("sending: {}", buf);
-            // let _ = write!(&mut buf, "{}", i); // more efficient, but less flexible
+            let message = Message::new(
+                local_ip().unwrap().to_string(),
+                RECEIVER_IP.to_string(),
+                TOPIC.to_string(),
+                Some(SystemTime::now().into()),
+            );
+            println!("sending: {:?}", message);
             producer
-                .send(&Record::from_value(TOPIC, buf.as_bytes()))
+                .send(&Record::from_value(
+                    TOPIC,
+                    message.to_string().unwrap().as_bytes(),
+                ))
                 .unwrap();
-            buf.clear();
             sleep(Duration::from_secs(2));
         }
     });
