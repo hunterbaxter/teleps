@@ -1,4 +1,4 @@
-use chrono::{offset::Utc, serde::ts_seconds_option, DateTime, Duration};
+use chrono::{offset::Utc, serde::ts_nanoseconds_option, DateTime, Duration};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use std::{
@@ -8,13 +8,13 @@ use std::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
-    sender_ip: String,
-    receiver_ip: String,
+    pub sender_ip: String,
+    pub receiver_ip: String,
     topic: String,
-    #[serde(with = "ts_seconds_option")]
-    send_time: Option<DateTime<Utc>>,
-    #[serde(with = "ts_seconds_option")]
-    receive_time: Option<DateTime<Utc>>,
+    #[serde(with = "ts_nanoseconds_option")]
+    pub send_time: Option<DateTime<Utc>>,
+    #[serde(with = "ts_nanoseconds_option")]
+    pub receive_time: Option<DateTime<Utc>>,
 }
 
 impl Message {
@@ -37,11 +37,11 @@ impl Message {
         serde_json::from_str(data)
     }
 
-    pub fn to_string(self) -> Result<String> {
+    pub fn to_string(&self) -> Result<String> {
         serde_json::to_string(&self)
     }
 
-    pub fn duration(self) -> Option<Duration> {
+    pub fn duration(&self) -> Option<Duration> {
         match (self.receive_time, self.send_time) {
             (None, Some(_)) | (Some(_), None) | (None, None) => None,
             (Some(x), Some(y)) => Some(x - y),
