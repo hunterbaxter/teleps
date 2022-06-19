@@ -12,7 +12,8 @@ use std::{
 use teleps::message::Message;
 
 const TOPIC: &str = "test";
-const RECEIVER_IP: &str = "localhost";
+// const RECEIVER_IP: &str = "localhost";
+const RECEIVER_IP: &str = "129.114.109.7";
 const RECEIVER_PORT: &str = "9092";
 
 fn init_tracer() -> Result<sdk::trace::Tracer, TraceError> {
@@ -30,6 +31,7 @@ fn main() -> Result<(), opentelemetry::trace::TraceError> {
                 .with_required_acks(RequiredAcks::One)
                 .create()
                 .unwrap();
+        println!("connected to server");
         for _ in 1..10 {
             let message = Message::new(
                 local_ip().unwrap().to_string(),
@@ -44,7 +46,8 @@ fn main() -> Result<(), opentelemetry::trace::TraceError> {
                     message.to_string().unwrap().as_bytes(),
                 ))
                 .unwrap();
-            sleep(Duration::from_secs(2));
+            println!("sent the message");
+            sleep(Duration::from_secs(10));
         }
     });
     global::shutdown_tracer_provider();
